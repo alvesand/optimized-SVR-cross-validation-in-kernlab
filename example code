@@ -4,7 +4,10 @@
 getwd()
 dim (X_pe) #SNP matrix 
 n=ncol(X_pe) 
+
+time1 = Sys.time()
 K <- as.matrix(mydist(X_pe)) #an optimized function to create the Euclidean distance matrix
+time2 = Sys.time()
 K= K^2 
 K = K/n
 
@@ -27,9 +30,6 @@ getwd()
 head(rownames(y_phen))
 head(rownames(X_pe))
 
-y_phen$ind =seq(1,dim(y_phen)[1],1)
-head(y_phen)
-
 ini_svm=Sys.time()
 for (j in 1:length(h)){
   for (i in 1:5){
@@ -38,31 +38,25 @@ for (j in 1:length(h)){
     K1 <- exp(-h[j]*K_train)
     n1 <- length(holdon)
     trainK <- as.kernelMatrix(K1[holdon,holdon]) 
-    e<- 3*sd(y_phen$phen[holdon])*sqrt(log(n1)/n1) #fixed epislon parameter
+    e<- 3*sd(y_phen$phen[holdon])*sqrt(log(n1)/n1) #fixed epsilon parameter as in Cherkassky and Ma (2004)
     c <- c(abs(mean (y_phen$phen[holdon])-3*sd(y_phen$phen[holdon])), abs(mean (y_phen$phen[holdon])+3*sd(y_phen$phen[holdon])))
-    C <- max(c) #fixed regularization parameter
+    C <- max(c) #fixed regularization parameter as in Cherkassky and Ma (2004)
     m <- ksvm(trainK, y_phen$phen[holdon], kernel='matrix', type="eps-svr",C=C, e=e, shrinking = T,scaled=T) 
     testK <- as.kernelMatrix(K1[holdout, holdon][,SVindex(m), drop=F])
     preds <- predict(m, testK)
     RMSE[j,i] <- mean((y_phen$phen[holdout]-preds)^2)
     corr[j,i] <- cor (y_phen$phen[holdout],preds)
-    #r_aj[j,i] <- corr[j,i]/(mean(sqrt(y_phen$r2_debv)))
-    r_aj[j,i] <- cor (y_phen$phen[holdout],preds)/sqrt(0.43)
-  
+      
   }    
   print(j)
 }
 fim_svm=Sys.time()
 
 sd_cor<-NULL
-cor_ajus<-NULL
-sd_ajus<-NULL
 sd_rmse<-NULL
 for (j in 1:length(h)){
   corall[j] <- mean (corr[j,])
   sd_cor[j] <- sd(corr[j,])
-  cor_ajus[j] <- mean (r_aj[j,])
-  sd_ajus[j] <- sd(r_aj[j,])
   rmseall[j] <- mean (RMSE[j,])
   sd_rmse[j] <- sd (RMSE[j,])
 }
